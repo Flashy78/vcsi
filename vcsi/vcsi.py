@@ -14,6 +14,8 @@ from argparse import ArgumentTypeError
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from typing import List, Iterable
+from pathlib import Path
+from timeit import default_timer as timer
 
 try:
     from subprocess import DEVNULL
@@ -580,7 +582,12 @@ class MediaCapture(object):
     def compute_avg_color(self, image_path):
         """Computes the average color of an image
         """
-        i = Image.open(image_path)
+        file_path = Path(image_path)
+        # Create an empty blank image if the thumbnail failed to generate
+        if file_path.stat().st_size == 0:
+            i = Image.new("RGB", (1, 1))
+        else:
+            i = Image.open(image_path)
         i = i.convert('P')
         p = i.getcolors()
 
@@ -598,7 +605,12 @@ class MediaCapture(object):
     def compute_blurriness(self, image_path):
         """Computes the blurriness of an image. Small value means less blurry.
         """
-        i = Image.open(image_path)
+        file_path = Path(image_path)
+        # Create an empty blank image if the thumbnail failed to generate
+        if file_path.stat().st_size == 0:
+            i = Image.new("RGB", (1, 1))
+        else:
+            i = Image.open(image_path)
         i = i.convert('L')  # convert to grayscale
 
         a = numpy.asarray(i)
@@ -1021,7 +1033,12 @@ def compose_contact_sheet(
     w = 0
     frames = sorted(frames, key=lambda x: x.timestamp)
     for i, frame in enumerate(frames):
-        f = Image.open(frame.filename)
+        file_path = Path(frame.filename)
+        # Create an empty blank image if the thumbnail failed to generate
+        if file_path.stat().st_size == 0:
+            f = Image.new("RGB", (1, 1))
+        else:
+            f = Image.open(frame.filename)
         f.putalpha(args.capture_alpha)
         image_capture_layer.paste(f, (w, h))
 
@@ -1618,12 +1635,16 @@ def main():
 
     def process_file_or_ignore(filepath, args):
         try:
+            start = timer()
             process_file(filepath, args)
         except Exception:
             if not args.ignore_errors:
                 raise
             else:
                 print("[WARN]: failed to process {} ... skipping.".format(filepath), file=sys.stderr)
+        finally:
+            end = timer()
+            print(f"Total Time: {end - start}")
 
     if args.recursive:
         for path in args.filenames:
@@ -1772,10 +1793,16 @@ def process_file(path, args):
         width = media_info.display_width
         args.vcs_width = x * width + (x - 1) * args.grid_horizontal_spacing
 
+    start = timer()
     selected_frames, temp_frames = select_sharpest_images(media_info, media_capture, args)
+    end = timer()
+    print(f"Sampling Time: {end - start}")
 
     print("Composing contact sheet...")
+    start = timer()
     image = compose_contact_sheet(media_info, selected_frames, args)
+    end = timer()
+    print(f"Composing Time: {end - start}")
 
     is_save_successful = save_image(args, image, media_info, output_path)
 
