@@ -606,11 +606,11 @@ class MediaCapture(object):
         """Computes the blurriness of an image. Small value means less blurry.
         """
         file_path = Path(image_path)
-        # Create an empty blank image if the thumbnail failed to generate
         if file_path.stat().st_size == 0:
-            i = Image.new("RGB", (1, 1))
-        else:
-            i = Image.open(image_path)
+            # No calculation needed on an empty file
+            return 1
+
+        i = Image.open(image_path)
         i = i.convert('L')  # convert to grayscale
 
         a = numpy.asarray(i)
