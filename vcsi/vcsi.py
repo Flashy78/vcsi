@@ -781,6 +781,9 @@ def select_sharpest_images(
 def select_color_variety(frames: Iterable[Frame], num_selected):
     """Select captures so that they are not too similar to each other.
     """
+    if len(frames) == 0:
+        return []
+    
     avg_color_sorted = sorted(frames, key=lambda x: x.avg_color)
     min_color = avg_color_sorted[0].avg_color
     max_color = avg_color_sorted[-1].avg_color
@@ -1034,7 +1037,7 @@ def compose_contact_sheet(
     frames = sorted(frames, key=lambda x: x.timestamp)
     for i, frame in enumerate(frames):
         file_path = Path(frame.filename)
-        # Create an empty blank image if the thumbnail failed to generate
+        # Create an empty blank image if the frame failed to generate
         if file_path.stat().st_size == 0:
             f = Image.new("RGB", (1, 1))
         else:
@@ -1736,7 +1739,13 @@ def process_file(path, args):
     if args.interval is not None:
         total_delay = total_delay_seconds(media_info, args)
         selected_duration = media_info.duration_seconds - total_delay
-        args.num_samples = math.floor(selected_duration / args.interval.total_seconds())
+        # This is added to deal with videos that are shorter than the interval timing passed in
+        args.num_samples = 0
+        while args.num_samples <= 1 and args.interval.total_seconds() > 1:
+            args.num_samples = math.floor(selected_duration / args.interval.total_seconds())
+            if args.num_samples <= 1:
+                args.interval = args.interval / 2
+
         args.num_selected = args.num_samples
         args.num_groups = args.num_samples
 

@@ -11,3 +11,5 @@ __pycache__
 /build
 /dist
 /vcsi.egg-info
+.vscode
+/test_videos
