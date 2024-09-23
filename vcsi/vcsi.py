@@ -295,10 +295,18 @@ class MediaInfo(object):
 
         try:
             # try getting video stream duration first
-            self.duration_seconds = float(self.video_stream["duration"])
+            start_time = float(self.video_stream["start_time"])
+            if start_time:
+                self.duration_seconds = float(self.video_stream["duration"]) - start_time
+            else:
+                self.duration_seconds = float(self.video_stream["duration"])
         except (KeyError, AttributeError):
             # otherwise fallback to format duration
-            self.duration_seconds = float(format_dict["duration"])
+            start_time = float(format_dict["start_time"])
+            if start_time:
+                self.duration_seconds = float(format_dict["duration"]) - start_time
+            else:
+                self.duration_seconds = float(format_dict["duration"])
 
         self.duration = MediaInfo.pretty_duration(self.duration_seconds)
 
